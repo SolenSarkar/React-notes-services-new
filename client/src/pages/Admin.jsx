@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Pagination from "../components/Pagination";
+import toast from "react-hot-toast";
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -37,7 +38,11 @@ function Admin({ user, onBack, onLogout }) {
   const [userPage, setUserPage] = useState(1);
   const [notePage, setNotePage] = useState(1);
 
-  const [limit] = useState(9);
+  // Admin notes: 9 notes per page
+  const [noteLimit] = useState(9);
+
+  // Admin users: 10 users per page
+  const [userLimit] = useState(10);
 
   const [userPagination, setUserPagination] =
     useState({
@@ -168,7 +173,7 @@ function Admin({ user, onBack, onLogout }) {
 
       const params = new URLSearchParams({
         page: String(userPage),
-        limit: String(limit),
+        limit: String(userLimit),
       });
 
       if (userSearch.trim()) {
@@ -231,7 +236,7 @@ function Admin({ user, onBack, onLogout }) {
   }, [
     userPage,
     userSearch,
-    limit,
+    userLimit,
     onLogout,
   ]);
 
@@ -253,7 +258,7 @@ function Admin({ user, onBack, onLogout }) {
 
       const params = new URLSearchParams({
         page: String(notePage),
-        limit: String(limit),
+        limit: String(noteLimit),
       });
 
       if (noteSearch.trim()) {
@@ -316,7 +321,7 @@ function Admin({ user, onBack, onLogout }) {
   }, [
     notePage,
     noteSearch,
-    limit,
+    noteLimit,
     onLogout,
   ]);
 
@@ -455,16 +460,20 @@ function Admin({ user, onBack, onLogout }) {
           ),
         })
       );
+
+      setError("");
+      toast.success("Note removed successfully");
     } catch (err) {
       console.error(
         "Admin delete note error:",
         err
       );
 
-      setError(
-        err.message ||
-          "Failed to delete note"
-      );
+      const message =
+        err.message || "Failed to delete note";
+
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -621,8 +630,9 @@ function Admin({ user, onBack, onLogout }) {
             </div>
 
             {loadingStats ? (
-              <div className="notes-loading">
-                Loading statistics...
+              <div className="admin-loading-container">
+                <div className="admin-spinner"></div>
+                <p>Loading statistics...</p>
               </div>
             ) : (
               <div className="admin-stats-grid">
@@ -731,8 +741,9 @@ function Admin({ user, onBack, onLogout }) {
             </div>
 
             {loadingUsers ? (
-              <div className="notes-loading">
-                Loading users...
+              <div className="admin-loading-container">
+                <div className="admin-spinner"></div>
+                <p>Loading users...</p>
               </div>
             ) : users.length === 0 ? (
               <div className="empty-notes">
@@ -870,8 +881,9 @@ function Admin({ user, onBack, onLogout }) {
             </div>
 
             {loadingNotes ? (
-              <div className="notes-loading">
-                Loading notes...
+              <div className="admin-loading-container">
+                <div className="admin-spinner"></div>
+                <p>Loading notes...</p>
               </div>
             ) : notes.length === 0 ? (
               <div className="empty-notes">
