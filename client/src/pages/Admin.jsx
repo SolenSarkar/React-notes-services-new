@@ -1,406 +1,862 @@
 import { useCallback, useEffect, useState } from "react";
+
 import Pagination from "../components/Pagination";
+
 import toast from "react-hot-toast";
 
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:5000";
+
+
+const API_URL =  import.meta.env.VITE_API_URL ||  "http://localhost:5000";
+
+
 
 function Admin({ user, onBack, onLogout }) {
+
   // =====================================================
+
   // STATE
+
   // =====================================================
+
+
 
   const [activeTab, setActiveTab] = useState("dashboard");
 
+
+
   const [stats, setStats] = useState({
+
     totalUsers: 0,
+
     totalNotes: 0,
+
     totalAdmins: 0,
+
     totalRegularUsers: 0,
+
   });
 
+
+
   const [users, setUsers] = useState([]);
+
   const [notes, setNotes] = useState([]);
 
+
+
   const [userSearchInput, setUserSearchInput] =
+
     useState("");
+
+
 
   const [userSearch, setUserSearch] =
+
     useState("");
+
+
 
   const [noteSearchInput, setNoteSearchInput] =
+
     useState("");
+
+
 
   const [noteSearch, setNoteSearch] =
+
     useState("");
 
+
+
   const [userPage, setUserPage] = useState(1);
+
   const [notePage, setNotePage] = useState(1);
 
+
+
   // Admin notes: 9 notes per page
+
   const [noteLimit] = useState(9);
 
+
+
   // Admin users: 10 users per page
+
   const [userLimit] = useState(10);
 
+
+
   const [userPagination, setUserPagination] =
+
     useState({
+
       page: 1,
+
       limit: 10,
+
       total: 0,
+
       totalPages: 0,
+
       hasNextPage: false,
+
       hasPreviousPage: false,
+
     });
+
+
 
   const [notePagination, setNotePagination] =
+
     useState({
+
       page: 1,
+
       limit: 9,
+
       total: 0,
+
       totalPages: 0,
+
       hasNextPage: false,
+
       hasPreviousPage: false,
+
     });
 
+
+
   const [loadingStats, setLoadingStats] =
+
     useState(true);
 
+
+
   const [loadingUsers, setLoadingUsers] =
+
     useState(false);
+
+
 
   const [loadingNotes, setLoadingNotes] =
+
     useState(false);
 
+
+
   const [error, setError] = useState("");
+  const [editingNote, setEditingNote] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+
+
 
   // =====================================================
+
   // TOKEN
+
   // =====================================================
+
+
 
   const getToken = () => {
+
     return localStorage.getItem("token");
+
   };
 
+
+
   // =====================================================
+
   // COMMON AUTH HEADERS
+
   // =====================================================
+
+
 
   const getHeaders = () => {
+
     const token = getToken();
 
+
+
     return {
-      Authorization: `Bearer ${token}`,
+
+      Authorization:  `Bearer ${token} `,
+
       "Content-Type": "application/json",
+
     };
+
   };
 
+
+
   // =====================================================
+
   // LOAD STATS
+
   // =====================================================
+
+
 
   const fetchStats = useCallback(async () => {
+
     try {
+
       setLoadingStats(true);
+
       setError("");
+
+
 
       const token = getToken();
 
+
+
       if (!token) {
+
         onLogout();
+
         return;
+
       }
 
+
+
       const response = await fetch(
-        `${API_URL}/api/admin/stats`,
+
+         `${API_URL}/api/admin/stats `,
+
         {
+
           headers: getHeaders(),
+
         }
+
       );
+
+
 
       const data = await response.json();
 
+
+
       if (!response.ok) {
+
         if (
+
           response.status === 401 ||
+
           response.status === 403
+
         ) {
+
           onLogout();
+
           return;
+
         }
 
+
+
         throw new Error(
+
           data.message ||
+
             "Failed to load dashboard statistics"
+
         );
+
       }
+
+
 
       setStats({
+
         totalUsers: data.totalUsers || 0,
+
         totalNotes: data.totalNotes || 0,
+
         totalAdmins: data.totalAdmins || 0,
+
         totalRegularUsers:
+
           data.totalRegularUsers || 0,
+
       });
+
     } catch (err) {
+
       console.error("Admin stats error:", err);
 
+
+
       setError(
+
         err.message ||
+
           "Failed to load dashboard statistics"
+
       );
+
     } finally {
+
       setLoadingStats(false);
+
     }
+
   }, [onLogout]);
 
+
+
   // =====================================================
+
   // LOAD USERS
+
   // =====================================================
+
+
 
   const fetchUsers = useCallback(async () => {
+
     try {
+
       setLoadingUsers(true);
+
       setError("");
+
+
 
       const token = getToken();
 
+
+
       if (!token) {
+
         onLogout();
+
         return;
+
       }
 
+
+
       const params = new URLSearchParams({
+
         page: String(userPage),
+
         limit: String(userLimit),
+
       });
+
+
 
       if (userSearch.trim()) {
+
         params.append(
+
           "search",
+
           userSearch.trim()
+
         );
+
       }
 
+
+
       const response = await fetch(
-        `${API_URL}/api/admin/users?${params.toString()}`,
+
+         `${API_URL}/api/admin/users?${params.toString()} `,
+
         {
+
           headers: getHeaders(),
+
         }
+
       );
+
+
 
       const data = await response.json();
 
+
+
       if (!response.ok) {
+
         if (
+
           response.status === 401 ||
+
           response.status === 403
+
         ) {
+
           onLogout();
+
           return;
+
         }
+
+
 
         throw new Error(
+
           data.message ||
+
             "Failed to load users"
+
         );
+
       }
 
+
+
       setUsers(
+
         Array.isArray(data.users)
+
           ? data.users
+
           : []
+
       );
+
+
 
       setUserPagination(
+
         data.pagination || {
+
           page: 1,
-          limit,
+
+          limit: userLimit,
+
           total: 0,
+
           totalPages: 0,
+
           hasNextPage: false,
+
           hasPreviousPage: false,
+
         }
+
       );
+
     } catch (err) {
+
       console.error("Admin users error:", err);
 
+
+
       setError(
+
         err.message ||
+
           "Failed to load users"
+
       );
+
     } finally {
+
       setLoadingUsers(false);
+
     }
+
   }, [
+
     userPage,
+
     userSearch,
+
     userLimit,
+
     onLogout,
+
   ]);
 
-  // =====================================================
-  // LOAD NOTES
+
+
   // =====================================================
 
+  // LOAD NOTES
+
+  // =====================================================
+
+
+
   const fetchNotes = useCallback(async () => {
+
     try {
+
       setLoadingNotes(true);
+
       setError("");
+
+
 
       const token = getToken();
 
+
+
       if (!token) {
+
         onLogout();
+
         return;
+
       }
+
+
 
       const params = new URLSearchParams({
+
         page: String(notePage),
+
         limit: String(noteLimit),
+
       });
 
+
+
       if (noteSearch.trim()) {
+
         params.append(
+
           "search",
+
           noteSearch.trim()
+
         );
+
       }
 
+
+
       const response = await fetch(
-        `${API_URL}/api/admin/notes?${params.toString()}`,
+
+         `${API_URL}/api/admin/notes?${params.toString()} `,
+
         {
+
           headers: getHeaders(),
+
         }
+
       );
+
+
 
       const data = await response.json();
 
+
+
       if (!response.ok) {
+
         if (
+
           response.status === 401 ||
+
           response.status === 403
+
         ) {
+
           onLogout();
+
           return;
+
         }
+
+
 
         throw new Error(
+
           data.message ||
+
             "Failed to load admin notes"
+
         );
+
       }
 
+
+
       setNotes(
+
         Array.isArray(data.notes)
+
           ? data.notes
+
           : []
+
       );
+
+
 
       setNotePagination(
+
         data.pagination || {
+
           page: 1,
-          limit,
+
+          limit: noteLimit,
+
           total: 0,
+
           totalPages: 0,
+
           hasNextPage: false,
+
           hasPreviousPage: false,
+
         }
+
       );
+
     } catch (err) {
+
       console.error("Admin notes error:", err);
 
+
+
       setError(
+
         err.message ||
+
           "Failed to load notes"
+
       );
+
     } finally {
+
       setLoadingNotes(false);
+
     }
+
   }, [
+
     notePage,
+
     noteSearch,
+
     noteLimit,
+
     onLogout,
+
   ]);
 
-  // =====================================================
-  // INITIAL DASHBOARD LOAD
+
+
   // =====================================================
 
+  // INITIAL DASHBOARD LOAD
+
+  // =====================================================
+
+
+
   useEffect(() => {
+
     fetchStats();
+
   }, [fetchStats]);
 
-  // =====================================================
-  // LOAD USERS WHEN USERS TAB IS OPENED
+
+
   // =====================================================
 
+  // LOAD USERS WHEN USERS TAB IS OPENED
+
+  // =====================================================
+
+
+
   useEffect(() => {
+
     if (activeTab === "users") {
+
       fetchUsers();
+
     }
+
   }, [activeTab, fetchUsers]);
 
+
+
   // =====================================================
+
   // LOAD NOTES WHEN NOTES TAB IS OPENED
+
   // =====================================================
+
+
 
   useEffect(() => {
+
     if (activeTab === "notes") {
+
       fetchNotes();
+
     }
+
   }, [activeTab, fetchNotes]);
 
+
+
   // =====================================================
-  // USER SEARCH
+
+  // DEBOUNCED USER SEARCH
+
   // =====================================================
+
+
+
+  useEffect(() => {
+
+    const timer = setTimeout(() => {
+
+      setUserPage(1);
+
+      setUserSearch(userSearchInput);
+
+    }, 400);
+
+
+
+    return () => clearTimeout(timer);
+
+  }, [userSearchInput]);
+
+
 
   const handleUserSearch = (e) => {
+
     e.preventDefault();
 
+
+
     setUserPage(1);
+
     setUserSearch(userSearchInput);
+
   };
+
+
 
   const clearUserSearch = () => {
+
     setUserSearchInput("");
+
     setUserSearch("");
+
     setUserPage(1);
+
   };
 
+
+
   // =====================================================
-  // NOTE SEARCH
+
+  // DEBOUNCED NOTE SEARCH
+
   // =====================================================
+
+
+
+  useEffect(() => {
+
+    const timer = setTimeout(() => {
+
+      setNotePage(1);
+
+      setNoteSearch(noteSearchInput);
+
+    }, 400);
+
+
+
+    return () => clearTimeout(timer);
+
+  }, [noteSearchInput]);
+
+
 
   const handleNoteSearch = (e) => {
+
     e.preventDefault();
 
+
+
     setNotePage(1);
+
     setNoteSearch(noteSearchInput);
+
   };
+
+
 
   const clearNoteSearch = () => {
+
     setNoteSearchInput("");
+
     setNoteSearch("");
+
     setNotePage(1);
+
   };
 
+
+
   // =====================================================
+
   // DELETE NOTE
+
   // =====================================================
 
-  const handleDeleteNote = async (noteId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to remove this note?"
-    );
 
-    if (!confirmed) {
+
+  // =====================================================
+  // EDIT NOTE
+  // =====================================================
+
+  const handleOpenEditNote = (note) => {
+    setEditingNote(note);
+    setEditTitle(note.title || "");
+    setEditContent(note.content || "");
+    setError("");
+  };
+
+  const handleCloseEditNote = () => {
+    if (savingEdit) return;
+    setEditingNote(null);
+    setEditTitle("");
+    setEditContent("");
+  };
+
+  const handleEditNote = async (e) => {
+    e.preventDefault();
+
+    const title = editTitle.trim();
+    const content = editContent.trim();
+
+    if (!title) {
+      toast.error("Note title is required");
+      return;
+    }
+
+    if (!content) {
+      toast.error("Note content is required");
       return;
     }
 
     try {
+      setSavingEdit(true);
       setError("");
 
       const token = getToken();
@@ -411,10 +867,11 @@ function Admin({ user, onBack, onLogout }) {
       }
 
       const response = await fetch(
-        `${API_URL}/api/admin/notes/${noteId}`,
+        `${API_URL}/api/admin/notes/${editingNote._id}`,
         {
-          method: "DELETE",
+          method: "PUT",
           headers: getHeaders(),
+          body: JSON.stringify({ title, content }),
         }
       );
 
@@ -430,512 +887,1146 @@ function Admin({ user, onBack, onLogout }) {
         }
 
         throw new Error(
-          data.message ||
-            "Failed to delete note"
+          data.message || "Failed to update note"
         );
       }
 
-      // Remove from current list immediately
+      const updatedNote = data.note || {
+        ...editingNote,
+        title,
+        content,
+      };
+
       setNotes((currentNotes) =>
-        currentNotes.filter(
-          (note) => note._id !== noteId
+        currentNotes.map((note) =>
+          note._id === editingNote._id
+            ? { ...note, ...updatedNote }
+            : note
         )
       );
 
-      // Update totals
-      setStats((currentStats) => ({
-        ...currentStats,
-        totalNotes: Math.max(
-          0,
-          currentStats.totalNotes - 1
-        ),
-      }));
-
-      setNotePagination(
-        (currentPagination) => ({
-          ...currentPagination,
-          total: Math.max(
-            0,
-            currentPagination.total - 1
-          ),
-        })
-      );
-
+      setEditingNote(null);
+      setEditTitle("");
+      setEditContent("");
       setError("");
-      toast.success("Note removed successfully");
+
+      toast.success("Note updated successfully");
     } catch (err) {
-      console.error(
-        "Admin delete note error:",
-        err
-      );
+      console.error("Admin edit note error:", err);
 
       const message =
-        err.message || "Failed to delete note";
+        err.message || "Failed to update note";
 
       setError(message);
       toast.error(message);
+    } finally {
+      setSavingEdit(false);
     }
   };
 
+  const handleDeleteNote = async (noteId) => {
+
+    const confirmed = window .confirm(
+
+      "Are you sure you want to remove this note?"
+
+    );
+
+
+
+    if (!confirmed) {
+
+      return;
+
+    }
+
+
+
+    try {
+
+      setError("");
+
+
+
+      const token = getToken();
+
+
+
+      if (!token) {
+
+        onLogout();
+
+        return;
+
+      }
+
+
+
+      const response = await fetch(
+
+         `${API_URL}/api/admin/notes/${noteId} `,
+
+        {
+
+          method: "DELETE",
+
+          headers: getHeaders(),
+
+        }
+
+      );
+
+
+
+      const data = await response.json();
+
+
+
+      if (!response.ok) {
+
+        if (
+
+          response.status === 401 ||
+
+          response.status === 403
+
+        ) {
+
+          onLogout();
+
+          return;
+
+        }
+
+
+
+        throw new Error(
+
+          data.message ||
+
+            "Failed to delete note"
+
+        );
+
+      }
+
+
+
+      // Remove from current list immediately
+
+      setNotes((currentNotes) =>
+
+        currentNotes.filter(
+
+          (note) => note. _id !== noteId
+
+        )
+
+      );
+
+
+
+      // Update totals
+
+      setStats((currentStats) => ({
+
+        ...currentStats,
+
+        totalNotes: Math.max(
+
+          0,
+
+          currentStats.totalNotes - 1
+
+        ),
+
+      }));
+
+
+
+      setNotePagination(
+
+        (currentPagination) => ({
+
+          ...currentPagination,
+
+          total: Math.max(
+
+            0,
+
+            currentPagination.total - 1
+
+          ),
+
+        })
+
+      );
+
+
+
+      setError("");
+
+      toast.success("Note removed successfully");
+
+    } catch (err) {
+
+      console.error(
+
+        "Admin delete note error:",
+
+        err
+
+      );
+
+
+
+      const message =
+
+        err.message || "Failed to delete note";
+
+
+
+      setError(message);
+
+      toast.error(message);
+
+    }
+
+  };
+
+
+
   // =====================================================
+
   // ACCESS PROTECTION
+
   // =====================================================
+
+
 
   if (!user || user.role !== "admin") {
+
     return (
-      <div className="admin-page">
-        <main className="admin-access-denied">
-          <h2>Access Denied</h2>
 
-          <p>
+       <div className="admin-page">
+
+         <main className="admin-access-denied">
+
+           <h2>Access Denied </h2>
+
+
+
+           <p>
+
             You must be an administrator to
-            access this page.
-          </p>
 
-          <button
+            access this page.
+
+           </p>
+
+
+
+           <button
+
             type="button"
+
             onClick={onBack}
+
           >
+
             Back to Notes
-          </button>
-        </main>
-      </div>
+
+           </button>
+
+         </main>
+
+       </div>
+
     );
+
   }
 
+
+
   // =====================================================
+
   // RENDER
+
   // =====================================================
+
+
 
   return (
-    <div className="admin-page">
 
-      {/* ==========================================
+     <div className="admin-page">
+
+
+
+      {
+      /* ==========================================
+
           HEADER
-      ========================================== */}
 
-      <header className="admin-header">
-        <div>
-          <h1>🛡️ Admin Dashboard</h1>
+      ==========================================  */
+      }
 
-          <p>
+
+
+       <header className="admin-header">
+
+         <div>
+
+           <h1>🛡️ Admin Dashboard </h1>
+
+
+
+           <p>
+
             Welcome,{" "}
-            <strong>
+
+             <strong>
+
               {user.name || user.email}
-            </strong>
-          </p>
-        </div>
 
-        <div className="admin-header-actions">
+             </strong>
 
-          <button
+           </p>
+
+         </div>
+
+
+
+         <div className="admin-header-actions">
+
+
+
+           <button
+
             type="button"
+
             onClick={onBack}
+
           >
+
             My Notes
-          </button>
 
-          <button
+           </button>
+
+
+
+           <button
+
             type="button"
+
             onClick={onLogout}
+
           >
+
             Logout
-          </button>
 
-        </div>
-      </header>
+           </button>
+
+
+
+         </div>
+
+       </header>
+
+
 
       {/* ==========================================
+
           NAVIGATION
-      ========================================== */}
 
-      <nav className="admin-nav">
+      ==========================================  */}
 
-        <button
+
+
+       <nav className="admin-nav">
+
+
+
+         <button
+
           type="button"
+
           className={
+
             activeTab === "dashboard"
+
               ? "active"
+
               : ""
+
           }
+
           onClick={() =>
+
             setActiveTab("dashboard")
+
           }
+
         >
+
           Dashboard
-        </button>
 
-        <button
+         </button>
+
+
+
+         <button
+
           type="button"
+
           className={
+
             activeTab === "users"
+
               ? "active"
+
               : ""
+
           }
+
           onClick={() =>
+
             setActiveTab("users")
+
           }
+
         >
+
           Users
-        </button>
 
-        <button
+         </button>
+
+
+
+         <button
+
           type="button"
-          className={
-            activeTab === "notes"
-              ? "active"
-              : ""
-          }
-          onClick={() =>
-            setActiveTab("notes")
-          }
-        >
-          Notes
-        </button>
 
-      </nav>
+          className={
+
+            activeTab === "notes"
+
+              ? "active"
+
+              : ""
+
+          }
+
+          onClick={() =>
+
+            setActiveTab("notes")
+
+          }
+
+        >
+
+          Notes
+
+         </button>
+
+
+
+       </nav>
+
+
 
       {/* ==========================================
+
           ERROR
-      ========================================== */}
+
+      ==========================================  */}
+
+
 
       {error && (
-        <div className="notes-error">
+
+         <div className="notes-error">
+
           {error}
-        </div>
+
+         </div>
+
       )}
 
-      <main className="admin-content">
+
+
+       <main className="admin-content">
+
+
 
         {/* ========================================
+
             DASHBOARD TAB
-        ======================================== */}
+
+        ========================================  */}
+
+
 
         {activeTab === "dashboard" && (
-          <section>
 
-            <div className="admin-section-title">
-              <h2>Overview</h2>
+           <section>
 
-              <button
+
+
+             <div className="admin-section-title">
+
+               <h2>Overview </h2>
+
+
+
+               <button
+
                 type="button"
+
                 onClick={() => {
+
                   fetchStats();
+
                   fetchUsers();
+
                   fetchNotes();
+
                 }}
+
               >
+
                 Refresh
-              </button>
-            </div>
+
+               </button>
+
+             </div>
+
+
 
             {loadingStats ? (
-              <div className="admin-loading-container">
-                <div className="admin-spinner"></div>
-                <p>Loading statistics...</p>
-              </div>
+
+               <div className="admin-loading-container">
+
+                 <div className="admin-spinner"> </div>
+
+                 <p>Loading statistics... </p>
+
+               </div>
+
             ) : (
-              <div className="admin-stats-grid">
 
-                <div className="admin-stat-card">
-                  <span>Total Users</span>
-                  <strong>
+               <div className="admin-stats-grid">
+
+
+
+                 <div className="admin-stat-card">
+
+                   <span>Total Users </span>
+
+                   <strong>
+
                     {stats.totalUsers}
-                  </strong>
-                </div>
 
-                <div className="admin-stat-card">
-                  <span>Total Notes</span>
-                  <strong>
+                   </strong>
+
+                 </div>
+
+
+
+                 <div className="admin-stat-card">
+
+                   <span>Total Notes </span>
+
+                   <strong>
+
                     {stats.totalNotes}
-                  </strong>
-                </div>
 
-                <div className="admin-stat-card">
-                  <span>Administrators</span>
-                  <strong>
+                   </strong>
+
+                 </div>
+
+
+
+                 <div className="admin-stat-card">
+
+                   <span>Administrators </span>
+
+                   <strong>
+
                     {stats.totalAdmins}
-                  </strong>
-                </div>
 
-                <div className="admin-stat-card">
-                  <span>Regular Users</span>
-                  <strong>
+                   </strong>
+
+                 </div>
+
+
+
+                 <div className="admin-stat-card">
+
+                   <span>Regular Users </span>
+
+                   <strong>
+
                     {stats.totalRegularUsers}
-                  </strong>
-                </div>
 
-              </div>
+                   </strong>
+
+                 </div>
+
+
+
+               </div>
+
             )}
 
-            <div className="admin-welcome-card">
 
-              <h2>
+
+             <div className="admin-welcome-card">
+
+
+
+               <h2>
+
                 Welcome to the Admin Panel
-              </h2>
 
-              <p>
+               </h2>
+
+
+
+               <p>
+
                 From here you can monitor
+
                 users and moderate notes
+
                 across the React Notes
+
                 Services platform.
-              </p>
 
-            </div>
+               </p>
 
-          </section>
+
+
+             </div>
+
+
+
+           </section>
+
         )}
 
+
+
         {/* ========================================
+
             USERS TAB
-        ======================================== */}
+
+        ========================================  */}
+
+
 
         {activeTab === "users" && (
-          <section>
 
-            <div className="admin-section-title">
-              <div>
-                <h2>User Management</h2>
+           <section>
 
-                <p>
+
+
+             <div className="admin-section-title">
+
+               <div>
+
+                 <h2>User Management </h2>
+
+
+
+                 <p>
+
                   View registered users
-                  and their roles.
-                </p>
-              </div>
-            </div>
 
-            <form
+                  and their roles.
+
+                 </p>
+
+               </div>
+
+             </div>
+
+
+
+             <form
+
               className="search-form"
+
               onSubmit={handleUserSearch}
+
             >
 
-              <input
+
+
+               <input
+
                 type="text"
+
                 placeholder="Search users by name or email..."
+
                 value={userSearchInput}
+
                 onChange={(e) =>
+
                   setUserSearchInput(
+
                     e.target.value
+
                   )
+
                 }
+
               />
 
-              <button type="submit">
+
+
+               <button type="submit">
+
                 Search
-              </button>
+
+               </button>
+
+
 
               {userSearch && (
-                <button
+
+                 <button
+
                   type="button"
+
                   onClick={clearUserSearch}
+
                 >
+
                   Clear
-                </button>
+
+                 </button>
+
               )}
 
-            </form>
 
-            <div className="admin-summary">
+
+             </form>
+
+
+
+             <div className="admin-summary">
+
               Total users:{" "}
+
               {userPagination.total}
-            </div>
+
+             </div>
+
+
 
             {loadingUsers ? (
-              <div className="admin-loading-container">
-                <div className="admin-spinner"></div>
-                <p>Loading users...</p>
-              </div>
+
+               <div className="admin-loading-container">
+
+                 <div className="admin-spinner"> </div>
+
+                 <p>Loading users... </p>
+
+               </div>
+
             ) : users.length === 0 ? (
-              <div className="empty-notes">
-                <h3>No users found</h3>
-              </div>
+
+               <div className="empty-notes">
+
+                 <h3>No users found </h3>
+
+               </div>
+
             ) : (
-              <div className="admin-table-wrapper">
 
-                <table className="admin-table">
+               <div className="admin-table-wrapper">
 
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                      <th>Joined</th>
-                    </tr>
-                  </thead>
 
-                  <tbody>
+
+                 <table className="admin-table">
+
+
+
+                   <thead>
+
+                     <tr>
+
+                       <th>Name </th>
+
+                       <th>Email </th>
+
+                       <th>Role </th>
+
+                       <th>Joined </th>
+
+                     </tr>
+
+                   </thead>
+
+
+
+                   <tbody>
+
+
 
                     {users.map((item) => (
-                      <tr key={item._id}>
 
-                        <td>
+                       <tr key={item. _id}>
+
+
+
+                         <td>
+
                           {item.name}
-                        </td>
 
-                        <td>
+                         </td>
+
+
+
+                         <td>
+
                           {item.email}
-                        </td>
 
-                        <td>
-                          <span
-                            className={`role-badge ${item.role}`}
+                         </td>
+
+
+
+                         <td>
+
+                           <span
+
+                            className={ `role-badge ${item.role} `}
+
                           >
+
                             {item.role}
-                          </span>
-                        </td>
 
-                        <td>
+                           </span>
+
+                         </td>
+
+
+
+                         <td>
+
                           {item.createdAt
-                            ? new Date(
-                                item.createdAt
-                              ).toLocaleDateString()
-                            : "-"}
-                        </td>
 
-                      </tr>
+                            ? new Date(
+
+                                item.createdAt
+
+                              ).toLocaleDateString()
+
+                            : "-"}
+
+                         </td>
+
+
+
+                       </tr>
+
                     ))}
 
-                  </tbody>
 
-                </table>
 
-              </div>
+                   </tbody>
+
+
+
+                 </table>
+
+
+
+               </div>
+
             )}
 
-            <Pagination
+
+
+             <Pagination
+
               page={userPagination.page}
+
               totalPages={
+
                 userPagination.totalPages
+
               }
+
               hasNextPage={
+
                 userPagination.hasNextPage
+
               }
+
               hasPreviousPage={
+
                 userPagination.hasPreviousPage
+
               }
+
               onPageChange={(newPage) => {
+
                 setUserPage(newPage);
 
-                window.scrollTo({
+
+
+                window .scrollTo({
+
                   top: 0,
+
                   behavior: "smooth",
+
                 });
+
               }}
+
             />
 
-          </section>
+
+
+           </section>
+
         )}
 
+
+
         {/* ========================================
+
             NOTES TAB
-        ======================================== */}
+
+        ========================================  */}
+
+
 
         {activeTab === "notes" && (
-          <section>
 
-            <div className="admin-section-title">
-              <div>
-                <h2>Notes Management</h2>
+           <section>
 
-                <p>
+
+
+             <div className="admin-section-title">
+
+               <div>
+
+                 <h2>Notes Management </h2>
+
+
+
+                 <p>
+
                   View and moderate all
-                  notes created by users.
-                </p>
-              </div>
-            </div>
 
-            <form
+                  notes created by users.
+
+                 </p>
+
+               </div>
+
+             </div>
+
+
+
+             <form
+
               className="search-form"
+
               onSubmit={handleNoteSearch}
+
             >
 
-              <input
+
+
+               <input
+
                 type="text"
+
                 placeholder="Search all notes..."
+
                 value={noteSearchInput}
+
                 onChange={(e) =>
+
                   setNoteSearchInput(
+
                     e.target.value
+
                   )
+
                 }
+
               />
 
-              <button type="submit">
+
+
+               <button type="submit">
+
                 Search
-              </button>
+
+               </button>
+
+
 
               {noteSearch && (
-                <button
+
+                 <button
+
                   type="button"
+
                   onClick={clearNoteSearch}
+
                 >
+
                   Clear
-                </button>
+
+                 </button>
+
               )}
 
-            </form>
 
-            <div className="admin-summary">
+
+             </form>
+
+
+
+             <div className="admin-summary">
+
               Total notes:{" "}
+
               {notePagination.total}
-            </div>
+
+             </div>
+
+
 
             {loadingNotes ? (
-              <div className="admin-loading-container">
-                <div className="admin-spinner"></div>
-                <p>Loading notes...</p>
-              </div>
+
+               <div className="admin-loading-container">
+
+                 <div className="admin-spinner"> </div>
+
+                 <p>Loading notes... </p>
+
+               </div>
+
             ) : notes.length === 0 ? (
-              <div className="empty-notes">
-                <h3>No notes found</h3>
-              </div>
+
+               <div className="empty-notes">
+
+                 <h3>No notes found </h3>
+
+               </div>
+
             ) : (
-              <div className="notes-list">
+
+               <div className="notes-list">
+
+
 
                 {notes.map((note) => (
-                  <div
+
+                   <div
+
                     className="note-card admin-note-card"
-                    key={note._id}
+
+                    key={note. _id}
+
                   >
 
-                    <div className="note-card-content">
 
-                      <h3>
+
+                     <div className="note-card-content">
+
+
+
+                       <h3>
+
                         {note.title}
-                      </h3>
 
-                      <p>
+                       </h3>
+
+
+
+                       <p>
+
                         {note.content}
-                      </p>
 
-                      <div className="note-owner">
+                       </p>
 
-                        <strong>
+
+
+                       <div className="note-owner">
+
+
+
+                         <strong>
+
                           Owner:
-                        </strong>{" "}
+
+                         </strong>{" "}
+
+
 
                         {note.user?.name ||
+
                           "Unknown"}
+
+
 
                         {" — "}
 
+
+
                         {note.user?.email ||
+
                           "Unknown"}
 
-                      </div>
 
-                      <small>
+
+                       </div>
+
+
+
+                       <small>
+
                         Created:{" "}
+
                         {note.createdAt
+
                           ? new Date(
+
                               note.createdAt
+
                             ).toLocaleString()
+
                           : "-"}
-                      </small>
 
-                    </div>
+                       </small>
 
-                    <div className="note-actions">
+
+
+                     </div>
+
+
+
+                     <div className="note-actions">
+
+
+
+                       <button
+                        type="button"
+                        className="edit-button"
+                        onClick={() =>
+                          handleOpenEditNote(note)
+                        }
+                      >
+                        Edit
+                      </button>
 
                       <button
                         type="button"
@@ -949,41 +2040,175 @@ function Admin({ user, onBack, onLogout }) {
                         Remove
                       </button>
 
-                    </div>
 
-                  </div>
+
+                     </div>
+
+
+
+                   </div>
+
                 ))}
 
-              </div>
+
+
+               </div>
+
             )}
 
-            <Pagination
+
+
+             <Pagination
+
               page={notePagination.page}
+
               totalPages={
+
                 notePagination.totalPages
+
               }
+
               hasNextPage={
+
                 notePagination.hasNextPage
+
               }
+
               hasPreviousPage={
+
                 notePagination.hasPreviousPage
+
               }
+
               onPageChange={(newPage) => {
+
                 setNotePage(newPage);
 
-                window.scrollTo({
+
+
+                window .scrollTo({
+
                   top: 0,
+
                   behavior: "smooth",
+
                 });
+
               }}
+
             />
 
-          </section>
+
+
+           </section>
+
+        )}
+
+
+
+         {/* ========================================
+            EDIT NOTE MODAL
+        ======================================== */}
+
+        {editingNote && (
+          <div
+            className="admin-modal-overlay"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                handleCloseEditNote();
+              }
+            }}
+          >
+            <div
+              className="admin-edit-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-note-title"
+            >
+              <div className="admin-modal-header">
+                <div>
+                  <h2 id="edit-note-title">Edit Note</h2>
+                  <p>
+                    Update the title and content of this note.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="admin-modal-close"
+                  onClick={handleCloseEditNote}
+                  disabled={savingEdit}
+                  aria-label="Close edit note dialog"
+                >
+                  ×
+                </button>
+              </div>
+
+              <form
+                className="admin-edit-form"
+                onSubmit={handleEditNote}
+              >
+                <label htmlFor="admin-edit-title">Title</label>
+
+                <input
+                  id="admin-edit-title"
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) =>
+                    setEditTitle(e.target.value)
+                  }
+                  placeholder="Enter note title"
+                  maxLength={200}
+                  disabled={savingEdit}
+                  autoFocus
+                />
+
+                <label htmlFor="admin-edit-content">
+                  Content
+                </label>
+
+                <textarea
+                  id="admin-edit-content"
+                  value={editContent}
+                  onChange={(e) =>
+                    setEditContent(e.target.value)
+                  }
+                  placeholder="Enter note content"
+                  rows={8}
+                  disabled={savingEdit}
+                />
+
+                <div className="admin-modal-actions">
+                  <button
+                    type="button"
+                    className="admin-modal-cancel"
+                    onClick={handleCloseEditNote}
+                    disabled={savingEdit}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="admin-modal-save"
+                    disabled={savingEdit}
+                  >
+                    {savingEdit ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
 
       </main>
-    </div>
+
+     </div>
+
   );
+
 }
+
+
 
 export default Admin;
